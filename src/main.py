@@ -1,13 +1,14 @@
-from textnode import TextNode, TextType
-
+import os
+import shutil
+from functions import copy_content, generate_pages_recursive
 
 def main():
-    node = TextNode(
-        "This is some anchor text",
-        TextType.LINK,
-        "https://www.google.com",
-    )
-    print(node)
+    source = "content"
+    destination = "public"
 
-
+    if os.path.exists(destination):
+        shutil.rmtree(destination)
+    copy_content("static", "public")
+    generate_pages_recursive(source, "template.html", destination)
+    
 main()

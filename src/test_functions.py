@@ -7,9 +7,13 @@ from functions import (
     split_nodes_image,
     split_nodes_link,
     text_to_textnodes,
-    markdown_to_blocks
+    markdown_to_blocks,
+    block_to_block_type,
+    markdown_to_html_node,
+    extract_title
 )
 from textnode import TextNode, TextType
+from blocktype import BlockType
 
 
 class TestSplitNodes(unittest.TestCase):
@@ -94,39 +98,49 @@ class TestSplitNodes(unittest.TestCase):
         node = TextNode("This is just text without image", TextType.TEXT)
         new_nodes = split_nodes_image([node])
         self.assertListEqual([node], new_nodes)
-        
+
     def test_split_images_start_with_image(self):
-        node = TextNode("![image](https://i.imgur.com/zjjcJKZ.png) this is an image", TextType.TEXT)
-        new_nodes = split_nodes_image([node])
-        self.assertListEqual(
-            [
-            TextNode("image", TextType.IMAGE, "https://i.imgur.com/zjjcJKZ.png"),
-            TextNode(" this is an image", TextType.TEXT),
-            ],
-        new_nodes,
+        node = TextNode(
+            "![image](https://i.imgur.com/zjjcJKZ.png) this is an image", TextType.TEXT
         )
-
-    def test_split_images_end_with_image(self):
-        node = TextNode("This is an image ![image](https://i.imgur.com/zjjcJKZ.png)", TextType.TEXT)
         new_nodes = split_nodes_image([node])
         self.assertListEqual(
             [
-            TextNode("This is an image ", TextType.TEXT),
-            TextNode("image", TextType.IMAGE, "https://i.imgur.com/zjjcJKZ.png"),
-            ],
-        new_nodes,
-        )
-
-    def test_split_images_only_two_images(self):
-        node = TextNode("![image](https://i.imgur.com/zjjcJKZ.png)![second image](https://i.imgur.com/3elNhQu.png)", TextType.TEXT)
-        new_nodes = split_nodes_image([node])
-        self.assertListEqual(
-            [
-            TextNode("image", TextType.IMAGE, "https://i.imgur.com/zjjcJKZ.png"),
-            TextNode("second image", TextType.IMAGE, "https://i.imgur.com/3elNhQu.png"),
+                TextNode("image", TextType.IMAGE, "https://i.imgur.com/zjjcJKZ.png"),
+                TextNode(" this is an image", TextType.TEXT),
             ],
             new_nodes,
         )
+
+    def test_split_images_end_with_image(self):
+        node = TextNode(
+            "This is an image ![image](https://i.imgur.com/zjjcJKZ.png)", TextType.TEXT
+        )
+        new_nodes = split_nodes_image([node])
+        self.assertListEqual(
+            [
+                TextNode("This is an image ", TextType.TEXT),
+                TextNode("image", TextType.IMAGE, "https://i.imgur.com/zjjcJKZ.png"),
+            ],
+            new_nodes,
+        )
+
+    def test_split_images_only_two_images(self):
+        node = TextNode(
+            "![image](https://i.imgur.com/zjjcJKZ.png)![second image](https://i.imgur.com/3elNhQu.png)",
+            TextType.TEXT,
+        )
+        new_nodes = split_nodes_image([node])
+        self.assertListEqual(
+            [
+                TextNode("image", TextType.IMAGE, "https://i.imgur.com/zjjcJKZ.png"),
+                TextNode(
+                    "second image", TextType.IMAGE, "https://i.imgur.com/3elNhQu.png"
+                ),
+            ],
+            new_nodes,
+        )
+
     def test_split_link(self):
         node = TextNode(
             "This is text with a link [to boot dev](https://www.boot.dev) and [to youtube](https://www.youtube.com/@bootdotdev)",
@@ -157,7 +171,9 @@ class TestSplitNodes(unittest.TestCase):
                 TextNode(" word and a ", TextType.TEXT),
                 TextNode("code block", TextType.CODE),
                 TextNode(" and an ", TextType.TEXT),
-                TextNode("obi wan image", TextType.IMAGE, "https://i.imgur.com/fJRm4Vk.jpeg"),
+                TextNode(
+                    "obi wan image", TextType.IMAGE, "https://i.imgur.com/fJRm4Vk.jpeg"
+                ),
                 TextNode(" and a ", TextType.TEXT),
                 TextNode("link", TextType.LINK, "https://boot.dev"),
             ],
@@ -183,6 +199,121 @@ This is the same paragraph on a new line
                 "- This is a list\n- with items",
             ],
         )
+
+    def test_block_to_block_types_paragraph(self):
+        block = "This is a normal paragraph block"
+        blocktype = block_to_block_type(block)
+        self.assertEqual(blocktype, BlockType.PARAGRAPH)
+
+    def test_block_to_block_types_heading(self):
+        block = "### This is a H3 heading"
+        blocktype = block_to_block_type(block)
+        self.assertEqual(blocktype, BlockType.HEADING)
+
+    def test_block_to_block_types_code(self):
+        block = """```
+        this is a code block```"""
+        blocktype = block_to_block_type(block)
+        self.assertEqual(blocktype, BlockType.CODE)
+
+    def test_paragraphs(self):
+        md = """
+    This is **bolded** paragraph
+    text in a p
+    tag here
+
+    This is another paragraph with _italic_ text and `code` here
+
+    """
+
+        node = markdown_to_html_node(md)
+        html = node.to_html()
+        self.assertEqual(
+            html,
+            "<div><p>This is <b>bolded</b> paragraph text in a p tag here</p><p>This is another paragraph with <i>italic</i> text and <code>code</code> here</p></div>",
+        )
+
+    def test_codeblock(self):
+        md = """
+    ```
+    This is text that _should_ remain
+    the **same** even with inline stuff
+    ```
+    """
+
+        node = markdown_to_html_node(md)
+        html = node.to_html()
+        self.assertEqual(
+            html,
+            "<div><pre><code>This is text that _should_ remain\nthe **same** even with inline stuff\n</code></pre></div>",
+        )
+
+
+    def test_single_paragraph(self):
+        md = "Hello **world**!"
+        node = markdown_to_html_node(md)
+        assert node.to_html() == "<div><p>Hello <b>world</b>!</p></div>"
+
+
+    def test_heading_levels(self):
+        md = "# Title\n\n### Subheading"
+        node = markdown_to_html_node(md)
+        assert node.to_html() == "<div><h1>Title</h1><h3>Subheading</h3></div>"
+
+    def test_unordered_list(self):
+        md = "- first\n- **second**\n- third"
+        node = markdown_to_html_node(md)
+        assert node.to_html() == (
+            "<div><ul>"
+            "<li>first</li>"
+            "<li><b>second</b></li>"
+            "<li>third</li>"
+            "</ul></div>"
+        )
+    def test_ordered_list(self):
+        md = "1. one\n2. _two_\n3. three"
+        node = markdown_to_html_node(md)
+        assert node.to_html() == "<div><ol><li>one</li><li><i>two</i></li><li>three</li></ol></div>"
+
+
+    def test_quote_block(self):
+        md = "> quoted line one\n> and **two**"
+        node = markdown_to_html_node(md)
+        assert node.to_html() == "<div><blockquote>quoted line one and <b>two</b></blockquote></div>"
+
+
+    def test_code_block_inline_ignored(self):
+        md = "```\ncode _not_ **parsed**\n```"
+        node = markdown_to_html_node(md)
+        assert node.to_html() == ("<div><pre><code>code _not_ **parsed**\n</code></pre></div>")
+
+    def test_extract_title(self):
+        md = """
+        # What a wonderful world
+        some line
+        primagen
+        hello
+        """
+        title = extract_title(md)
+        assert title == "What a wonderful world"
+    
+    def test_extract_no_title(self):
+        md = "There is absolutely no title"
+        try:
+            extract_title(md)
+            assert False, "No title found"
+        except Exception:
+            assert True
+    
+    def test_extract_title_second_line(self):
+        md = """
+        Title
+        # Is actually here
+        yeah man
+        """
+        title = extract_title(md)
+        assert title == "Is actually here"
+
+
 if __name__ == "__main__":
     unittest.main()
-
