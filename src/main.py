@@ -8,7 +8,7 @@ def main():
     destination = "docs"
     basepath = "/"
     if len(sys.argv) > 1:
-        basepath == sys.argv[1]
+        basepath = sys.argv[1]
 
     if os.path.exists(destination):
         shutil.rmtree(destination)
