@@ -267,7 +267,7 @@ def generate_page(from_path, template_path, dest_path, basepath):
         full_page = full_page.replace("{{ Title }}", page_title)
         full_page = full_page.replace("{{ Content }}", from_file_html_string)
         full_page = full_page.replace('href="/', f'href="{basepath}')
-        full_page = full_page.replace('src="/', f'href="{basepath}')
+        full_page = full_page.replace('src="/', f'src="{basepath}')
         
         dest_dir = os.path.dirname(dest_path)
         if dest_dir != "":
@@ -304,6 +304,6 @@ def generate_pages_recursive(dir_path_content, template_path, dest_dir_path, bas
             path_to_dest = os.path.join(dest_dir_path, destination_file)
             generate_page(path_to_item, template_path, path_to_dest, basepath)
         if os.path.isdir(path_to_item):
-            path_to_dest = os.path.join(dest_dir_path, path_to_item)
+            path_to_dest = os.path.join(dest_dir_path, item)
             generate_pages_recursive(path_to_item, template_path, path_to_dest, basepath)
 
