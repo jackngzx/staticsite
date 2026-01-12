@@ -7,11 +7,11 @@ def main():
     source = "content"
     destination = "public"
     basepath = "/"
-    basepath = sys.argv
+    basepath = sys.argv[1]
 
     if os.path.exists(destination):
         shutil.rmtree(destination)
     copy_content("static", "public")
-    generate_pages_recursive(basepath, "template.html", destination)
+    generate_pages_recursive(source, "template.html", destination, basepath)
     
 main()

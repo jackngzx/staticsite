@@ -254,10 +254,10 @@ def extract_title(markdown):
                 return stripped[2:]
     raise Exception("No title found")
 
-def generate_page(basepath, template_path, dest_path):
-    print(f"Generating page from {basepath} to {dest_path} using {template_path}")
+def generate_page(from_path, template_path, dest_path, basepath):
+    print(f"Generating page from {from_path} to {dest_path} using {template_path}")
     # file at from path
-    with open(basepath, "r") as from_file:
+    with open(from_path, "r") as from_file:
         from_file_md = from_file.read()
         from_file_html_string = markdown_to_html_node(from_file_md).to_html()
         page_title = extract_title(from_file_md)
@@ -267,7 +267,8 @@ def generate_page(basepath, template_path, dest_path):
         full_page = full_page.replace("{{ Title }}", page_title)
         full_page = full_page.replace("{{ Content }}", from_file_html_string)
         full_page = full_page.replace('href="/', f'href="{basepath}')
-        full_page = full_page.replace('src="/', f'src="{basepath}')
+        full_page = full_page.replace('src="/', f'href="{basepath}')
+        
         dest_dir = os.path.dirname(dest_path)
         if dest_dir != "":
             os.makedirs(dest_dir, exist_ok=True)
@@ -291,18 +292,18 @@ def copy_content(source_dir, destination_dir):
     else:
         raise Exception("Source directory does not exist")
 
-def generate_pages_recursive(basepath, template_path, dest_dir_path):
+def generate_pages_recursive(dir_path_content, template_path, dest_dir_path, basepath):
     # find content directory
-    content_dir = os.listdir(basepath)
+    content_dir = os.listdir(dir_path_content)
     # check each item in content directory
     for item in content_dir:
-        path_to_item = os.path.join(basepath, item)
+        path_to_item = os.path.join(dir_path_content, item)
         if os.path.isfile(path_to_item):
             root, ext = os.path.splitext(item)
             destination_file = root + ".html"
             path_to_dest = os.path.join(dest_dir_path, destination_file)
-            generate_page(path_to_item, template_path, path_to_dest)
+            generate_page(path_to_item, template_path, path_to_dest, basepath)
         if os.path.isdir(path_to_item):
-            path_to_dest = os.path.join(dest_dir_path, item)
-            generate_pages_recursive(path_to_item, template_path, path_to_dest)
+            path_to_dest = os.path.join(dest_dir_path, path_to_item)
+            generate_pages_recursive(path_to_item, template_path, path_to_dest, basepath)
 
